@@ -1,0 +1,19 @@
+New project -> Console application
+
+Project->Save project as...
+TestProject
+
+git clone https://github.com/risoflora/brookframework.git
+
+procuriamoci la libreria sagui
+https://github.com/risoflora/libsagui/releases
+
+
+
+libsagui-3.5.2-linux_amd64.tar.gz
+
+sudo cp libsagui.so.3.5.2 /usr/lib
+cd /usr/lib
+sudo ln -s libsagui.so.3.5.2 libsagui.so.3
+
+sudo apt-get -y install gnutls-bin 
