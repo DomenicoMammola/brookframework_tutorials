@@ -17,3 +17,15 @@ cd /usr/lib
 sudo ln -s libsagui.so.3.5.2 libsagui.so.3
 
 sudo apt-get -y install gnutls-bin 
+
+
+per windows:
+
+libsagui-3.5.2-windows_amd64.zip 
+copiare libsagui-3.dll nella cartella del progetto
+
+gnutls-3.8.6-mingw_amd64.zip 
+copiare tutte le dll nella cartella del progetto
+
+visitare:
+http://localhost:8080/ping
