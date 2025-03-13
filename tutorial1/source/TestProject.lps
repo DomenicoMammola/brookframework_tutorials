@@ -7,9 +7,9 @@
       <Unit>
         <Filename Value="TestProject.lpr"/>
         <IsPartOfProject Value="True"/>
-        <TopLine Value="8"/>
+        <IsVisibleTab Value="True"/>
         <CursorPos Y="32"/>
-        <UsageCount Value="28"/>
+        <UsageCount Value="29"/>
         <Loaded Value="True"/>
       </Unit>
       <Unit>
@@ -17,7 +17,7 @@
         <IsPartOfProject Value="True"/>
         <EditorIndex Value="3"/>
         <CursorPos Y="48"/>
-        <UsageCount Value="28"/>
+        <UsageCount Value="29"/>
         <Loaded Value="True"/>
       </Unit>
       <Unit>
@@ -25,7 +25,7 @@
         <IsPartOfProject Value="True"/>
         <EditorIndex Value="4"/>
         <CursorPos Y="30"/>
-        <UsageCount Value="28"/>
+        <UsageCount Value="29"/>
         <Loaded Value="True"/>
       </Unit>
       <Unit>
@@ -38,7 +38,6 @@
       </Unit>
       <Unit>
         <Filename Value="../../../../orsero/geco_backend/thirdparties/libpascalweb/brookframework/server/ModuloPing.pas"/>
-        <IsVisibleTab Value="True"/>
         <EditorIndex Value="6"/>
         <TopLine Value="2"/>
         <CursorPos X="116" Y="31"/>
