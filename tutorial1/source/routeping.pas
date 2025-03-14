@@ -32,7 +32,7 @@ end;
 
 procedure TRoutePing.AfterConstruction;
 begin
-  Methods:= [rmGET,rmOPTIONS];
+  Methods:= [rmGET];
   Pattern:= '/ping';
 end;
 
