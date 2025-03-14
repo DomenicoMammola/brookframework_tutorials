@@ -11,7 +11,15 @@ Dal sito GNU:
 GNU libmicrohttpd is a small C library that makes it easy to run an HTTP server as part of another application. GNU Libmicrohttpd is free software and part of the GNU project.
 ```
 
-## Il primo progetto
+## Il primo progetto in Lazarus
 
+Iniziamo creando un piccolissimo server web.
 
+Questo esercizio sarà utile per imparare a configurare un progetto e per muovere i primi passi con la libreria.
+
+Apri Lazarus e crea un nuovo progetto di tipo *Applicazione console* con questi parametri:
+
+![New console application options](printscreens/new_console_application.png)
+
+Salva il progetto in una cartella come *TestProject.dpi*.
 
