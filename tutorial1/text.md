@@ -1,4 +1,4 @@
-# Tutorial 1 - Brook framework
+# Tutorial 1 - The Brook framework
 
 Brook is a framework for FreePascal and for Delphi that allows to develop web servers and microservices based on the *http* protocol.
 

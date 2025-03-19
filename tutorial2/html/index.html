@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Alien Pet Adoption Agency</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f8ff;
+            margin: 0;
+            padding: 20px;
+        }
+        h1 {
+            color: #4b0082;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #4b0082;
+            color: white;
+        }
+        button {
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Alien Pet Adoption Agency</h1>
+
+    <h2>Add a New Alien Pet</h2>
+    <form id="addPetForm">
+        <input type="text" id="petName" placeholder="Pet Name" required>
+        <select id="petSpecies" required>
+            <option value="">Select Species</option>
+            <!-- Species options will be dynamically added here -->
+        </select>
+        <textarea id="petDescription" placeholder="Description" required></textarea>
+        <button type="submit">Add Pet</button>
+    </form>
+
+    <h2>Available Alien Pets</h2>
+    <table id="petList">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Species</th>
+                <th>Description</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- Pet items will be dynamically added here -->
+        </tbody>
+    </table>
+
+    <script>
+        // Sample data for demonstration
+        let pets = [
+            { name: "Zog", species: "Fluffonian", description: "A fluffy, three-eyed creature." },
+            { name: "Gleep", species: "Slimeworldian", description: "A slimy, green blob." }
+        ];
+
+        // Function to display pets in the table
+        function displayPets() {
+            const petList = document.getElementById('petList').getElementsByTagName('tbody')[0];
+            petList.innerHTML = ''; // Clear existing pets
+            pets.forEach((pet, index) => {
+                const row = petList.insertRow();
+                row.insertCell(0).innerText = pet.name;
+                row.insertCell(1).innerText = pet.species;
+                row.insertCell(2).innerText = pet.description;
+                const actionsCell = row.insertCell(3);
+                actionsCell.innerHTML = `<button onclick="editPet(${index})">Edit</button>
+                                         <button onclick="deletePet(${index})">Delete</button>`;
+            });
+        }
+
+        // Function to add a new pet
+        document.getElementById('addPetForm').addEventListener('submit', function(event) {
+            event.preventDefault();
+            const newPet = {
+                name: document.getElementById('petName').value,
+                species: document.getElementById('petSpecies').value,
+                description: document.getElementById('petDescription').value
+            };
+            pets.push(newPet);
+            displayPets();
+            this.reset(); // Clear the form
+        });
+
+        // Function to delete a pet
+        function deletePet(index) {
+            pets.splice(index, 1);
+            displayPets();
+        }
+
+        // Function to edit a pet
+        function editPet(index) {
+            const pet = pets[index];
+            document.getElementById('petName').value = pet.name;
+            document.getElementById('petSpecies').value = pet.species;
+            document.getElementById('petDescription').value = pet.description;
+            deletePet(index); // Remove the pet from the list for editing
+        }
+
+        async function fetchSpecies() {
+            try {
+                const response = await fetch('https://localhost/species');
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                const species = await response.json(); // Assuming the response is a plain array of strings
+                populateSpeciesDropdown(species);
+            } catch (error) {
+                console.error('Error fetching species:', error);
+            }
+        }
+
+        // Function to populate the species dropdown
+        function populateSpeciesDropdown(species) {
+            const speciesDropdown = document.getElementById('petSpecies');
+            species.forEach(speciesItem => {
+                const option = document.createElement('option');
+                option.value = speciesItem;
+                option.textContent = speciesItem;
+                speciesDropdown.appendChild(option);
+            });
+        }
+
+        // Initial display of pets
+        displayPets();
+        fetchSpecies();
+        
+    </script>
+
+</body>
+</html>
