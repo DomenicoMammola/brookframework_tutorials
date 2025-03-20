@@ -85,7 +85,7 @@ fetchSpecies();
 </script>
 ```
 
-Aprendo il file nel browser quello che otterremo sarà una pagina vuota!
+Aprendo il file nel browser quello che otterremo sarà una pagina completamente vuota!
 
 Uno sguardo alla console di sviluppo del browser basterà per rendersi conto che il problema sono i controlli del browser sui criteri cross-origin:
 
@@ -93,6 +93,8 @@ Uno sguardo alla console di sviluppo del browser basterà per rendersi conto che
 
 
 ### COOOOORRRRS!
+
+![Spock hates cors](printscreens/tu2_spock_cors.png)
 
 Nel nostro server non abbiamo gestito le chiamate [CORS](https://en.wikipedia.org/wiki/Cross-origin_resource_sharing).
 
@@ -129,3 +131,110 @@ end;
 Ora esegui il progetto e ricarica `test.html` nel broser, quello che vedrai è:
 
 ![species with cors enabled](printscreens/tu2_species_cors.png)
+
+Benissimo! Finito col CORS? No.
+
+L'header aggiunto è sufficiente ma solo se le chiamate CORS sono del  cosiddetto tipo [simple](https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/CORS#simple_requests). Purtroppo è necessario gestire richieste che il browser cataloga come [preflighted](https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/CORS#preflighted_requests) e quindi implementare la gestione del metodo http *OPTIONS*.
+
+Facciamo una prova: cambia la porta del servizio da 443 a 5443 sia nel codice pascal sia nella pagina `test.html`. La chiamata diventerà preflighted ed il browser inizierà ad invocare il metodo OPTIONS. L'utilizzo di una porta diversa dallo standard è solo uno dei motivi per cui il browser può decidere di utilizzare la chiamata OPTIONS. Ce ne sono molti purtroppo.
+
+Per risparmiarci mal di testa, implementiamo subito quanto manca per domare totalmente i criteri cors.
+
+Riapri la unit `standardheaders` ed inserisci questa nuova procedura che aggiunge gli header necessari a soddisfare il browser nella risposta al metodo OPTIONS:
+
+``` pascal
+procedure AddStandardHeadersForOptions(AResponse: TBrookHTTPResponse; ARoute: TBrookURLRoute);
+var
+  mt, sep : String;
+begin
+  AddStandardHeaders(AResponse);
+
+  if ARoute.Methods = [] then
+    mt := 'GET, PUT, POST, OPTIONS, HEAD'
+  else
+  begin
+    mt := '';
+    sep  := '';
+    if rmGet in ARoute.Methods then
+    begin
+      mt := mt + sep + 'GET';
+      sep := ', ';
+    end;
+    if rmPOST in ARoute.Methods then
+    begin
+      mt := mt + sep + 'POST';
+      sep := ', ';
+    end;
+    if rmPUT in ARoute.Methods then
+    begin
+      mt := mt + sep + 'PUT';
+      sep := ', ';
+    end;
+    if rmDELETE in ARoute.Methods then
+    begin
+      mt := mt + sep + 'DELETE';
+      sep := ', ';
+    end;
+    if rmPATCH in ARoute.Methods then
+    begin
+      mt := mt + sep + 'PATCH';
+      sep := ', ';
+    end;
+    if rmOPTIONS in ARoute.Methods then
+    begin
+      mt := mt + sep + 'OPTIONS';
+      sep := ', ';
+    end;
+    if rmHEAD in ARoute.Methods then
+    begin
+      mt := mt + sep + 'HEAD';
+      sep := ', ';
+    end;
+  end;
+
+  AResponse.Headers.Add('Access-Control-Allow-Methods', mt);
+  AResponse.Headers.Add('Access-Control-Allow-Headers', 'x-requested-with, content-type, authorization');
+end;
+```
+
+Ora aggiungi una nuova unit al progetto: `standardresponses`.
+
+Dentro questa unit definisci il seguente metodo che ci sarà utile per evitare di riscrivere lo stesso codice in tutte le route:
+
+``` pascal
+function HandleOptions(ARequest : TBrookHTTPRequest; AResponse: TBrookHTTPResponse; ARoute : TBrookURLRoute): boolean;
+begin
+  Result := false;
+  if ARequest.Method = 'OPTIONS' then
+  begin
+    AddStandardHeadersForOptions(AResponse, ARoute);
+    AResponse.Send('', 'text/html', 200);
+    Result := true;
+  end;
+end; 
+```
+
+Quasi finito... ora torna al codice della route `\species` e modifica il metodo `AfterConstruction` aggiungendo il metodo OPTIONS a quelli consentiti:
+``` pascal
+  Methods:= [rmGET, rmOPTIONS];
+```
+
+Modifica anche la funzione `DoRequest` in modo da aggiungere la gestione del metodo OPTIONS:
+``` pascal
+procedure TRouteSpecies.DoRequest(ASender: TObject; ARoute: TBrookURLRoute; ARequest: TBrookHTTPRequest; AResponse: TBrookHTTPResponse);
+begin
+  if HandleOptions(ARoute, ARequest, AResponse) then
+    exit;
+  AddStandardHeaders(aResponse);
+  AResponse.Send('["Zog", "Gleep", "Bloop"]', 'application/json; charset=utf-8', 200);
+end;  
+```
+
+Finito! Lancia il server e ricarica `test.html`: la pagina è tornata a funzionare anche con il servizio spostato sulla porta 5443.
+
+
+
+
+
+
+

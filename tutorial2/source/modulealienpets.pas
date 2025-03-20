@@ -23,19 +23,21 @@ type
 
 implementation
 uses
-  standardheaders;
+  standardheaders, standardresponses;
 
 { TRouteSpecies }
 
 procedure TRouteSpecies.DoRequest(ASender: TObject; ARoute: TBrookURLRoute; ARequest: TBrookHTTPRequest; AResponse: TBrookHTTPResponse);
 begin
+  if HandleOptions(ARoute, ARequest, AResponse) then
+    exit;
   AddStandardHeaders(aResponse);
   AResponse.Send('["Zog", "Gleep", "Bloop"]', 'application/json; charset=utf-8', 200);
 end;
 
 procedure TRouteSpecies.AfterConstruction;
 begin
-  Methods:= [rmGET];
+  Methods:= [rmGET, rmOPTIONS];
   Pattern:= '/species';
 end;
 

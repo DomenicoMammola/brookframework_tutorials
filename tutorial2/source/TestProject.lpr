@@ -6,7 +6,7 @@ uses
   {$IFDEF UNIX}
   cthreads,
   {$ENDIF}
-  Classes, SysUtils, CustApp, httpserver, standardheaders;
+  Classes, SysUtils, CustApp, httpserver, standardheaders, standardresponses;
 
 type
 
