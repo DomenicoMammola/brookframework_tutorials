@@ -41,10 +41,14 @@ end;
 constructor THTTPServer.Create(AOwner: TComponent);
 var
   speciesRoute : TRouteSpecies;
+  petsRoute : TRoutePetAliens;
+  petRoute : TRoutePetAlien;
 begin
   inherited Create(AOwner);
   FRouter := TBrookURLRouter.Create(Self);
   speciesRoute := TRouteSpecies.Create(FRouter.Routes);
+  petsRoute := TRoutePetAliens.Create(FRouter.Routes);
+  petRoute := TRoutePetAlien.Create(FRouter.Routes);
   FRouter.Active := true;
 end;
 
@@ -52,7 +56,7 @@ procedure THTTPServer.SetupServer;
 var
   lst : TStringList;
 begin
-  Self.Port := 5443;
+  Self.Port := 443;
 
   lst := TStringList.Create;
   try

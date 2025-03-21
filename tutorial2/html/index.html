@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -11,28 +12,35 @@
             margin: 0;
             padding: 20px;
         }
+
         h1 {
             color: #4b0082;
         }
+
         table {
             width: 100%;
             border-collapse: collapse;
             margin-top: 20px;
         }
-        th, td {
+
+        th,
+        td {
             border: 1px solid #ddd;
             padding: 8px;
             text-align: left;
         }
+
         th {
             background-color: #4b0082;
             color: white;
         }
+
         button {
             margin-top: 10px;
         }
     </style>
 </head>
+
 <body>
 
     <h1>Alien Pet Adoption Agency</h1>
@@ -52,9 +60,9 @@
     <table id="petList">
         <thead>
             <tr>
+                <th>Id</th>
                 <th>Name</th>
                 <th>Species</th>
-                <th>Description</th>
                 <th>Actions</th>
             </tr>
         </thead>
@@ -64,29 +72,25 @@
     </table>
 
     <script>
-        // Sample data for demonstration
-        let pets = [
-            { name: "Zog", species: "Fluffonian", description: "A fluffy, three-eyed creature." },
-            { name: "Gleep", species: "Slimeworldian", description: "A slimy, green blob." }
-        ];
+        const apiUrl = "https://localhost";
 
-        // Function to display pets in the table
-        function displayPets() {
+
+        function displayPets(petsList) {
             const petList = document.getElementById('petList').getElementsByTagName('tbody')[0];
             petList.innerHTML = ''; // Clear existing pets
-            pets.forEach((pet, index) => {
+            petsList.pets.forEach((pet, index) => {
                 const row = petList.insertRow();
-                row.insertCell(0).innerText = pet.name;
-                row.insertCell(1).innerText = pet.species;
-                row.insertCell(2).innerText = pet.description;
+                row.insertCell(0).innerText = pet.id;
+                row.insertCell(1).innerText = pet.name;
+                row.insertCell(2).innerText = pet.species;
                 const actionsCell = row.insertCell(3);
-                actionsCell.innerHTML = `<button onclick="editPet(${index})">Edit</button>
-                                         <button onclick="deletePet(${index})">Delete</button>`;
+                actionsCell.innerHTML = `<button onclick="editPet(${pet.id})">Edit</button>
+                                         <button onclick="deletePet(${pet.id})">Delete</button>`;
             });
         }
 
         // Function to add a new pet
-        document.getElementById('addPetForm').addEventListener('submit', function(event) {
+        document.getElementById('addPetForm').addEventListener('submit', function (event) {
             event.preventDefault();
             const newPet = {
                 name: document.getElementById('petName').value,
@@ -115,11 +119,11 @@
 
         async function fetchSpecies() {
             try {
-                const response = await fetch('https://localhost/species');
+                const response = await fetch(apiUrl + "/species", { mode: 'cors' });
                 if (!response.ok) {
                     throw new Error('Network response was not ok');
                 }
-                const species = await response.json(); // Assuming the response is a plain array of strings
+                const species = await response.json();
                 populateSpeciesDropdown(species);
             } catch (error) {
                 console.error('Error fetching species:', error);
@@ -137,11 +141,55 @@
             });
         }
 
-        // Initial display of pets
-        displayPets();
-        fetchSpecies();
-        
-    </script>
+        async function fetchPets() {
+            try {
+                const response = await fetch(apiUrl + "/alienpets", { mode: 'cors' });
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                const pets = await response.json();
+                displayPets(pets);
+            } catch (error) {
+                console.error('Error fetching species:', error);
+            }
+        }
 
+        // Function to post a new pet
+        async function postNewPet(newPet) {
+            try {
+                const response = await fetch(apiUrl + "/alienpet", {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(newPet)
+                });
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                const result = await response.json();
+                console.log('Pet added:', result);
+                fetchPets(); // Refresh the pet list after adding
+            } catch (error) {
+                console.error('Error adding pet:', error);
+            }
+        }
+
+        // Function to add a new pet
+        document.getElementById('addPetForm').addEventListener('submit', function (event) {
+            event.preventDefault();
+            const newPet = {
+                name: document.getElementById('petName').value,
+                species: document.getElementById('petSpecies').value,
+                description: document.getElementById('petDescription').value
+            };
+            postNewPet(newPet); // Call the new function to post the pet
+            this.reset(); // Clear the form
+        });
+
+        fetchSpecies();
+        fetchPets();
+    </script>
 </body>
+
 </html>

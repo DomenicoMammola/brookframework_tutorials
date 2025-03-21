@@ -232,9 +232,236 @@ end;
 
 Finito! Lancia il server e ricarica `test.html`: la pagina è tornata a funzionare anche con il servizio spostato sulla porta 5443.
 
+## Finalmente crud
+
+Aggiungi una nuova unit `alienpets` al progetto.
+
+Nella unit definisci un nuovo tipo che ci servirà per rappresentare il singolo animaletto alieno (l'implementazione dei metodi non è volutamente riportata perchè dovrebbe essere piuttosto semplice):
+
+``` pascal
+  TAlienPet = class
+  strict private
+    FId : integer;
+    FName : string;
+    FSpecies : string;
+  public
+    constructor Create;
+    procedure Clear;
+    procedure Assign(const aSource : TAlienPet);
+    procedure FromJson (aJsonData : TJSONData); overload;
+    procedure FromJson (const aJsonString : string); overload;
+    function ToJson: String; 
+
+    property Id : integer read FId write FId;
+    property Name : string read FName write FName;
+    property Species : string read FSpecies write FSpecies;
+  end; 
+  ```
+
+Devi anche creare una classe per memorizzare un elenco di animaletti che utilizzeremo nel server come repository in memoria degli animaletti. Proprio per questo dovrai proteggere le operazioni di lettura/scrittura con una critical section e i metodi Get* devono restituire una copia dell'istanza originale:
+
+``` pascal
+  TAlienPetsArchive = class
+  strict private
+    FList : TObjectList;
+    FCriticalSection : TCriticalSection;
+    function Get(const aIndex : integer): TAlienPet;
+  public
+    constructor Create;
+    destructor Destroy; override;
+
+    procedure Add(const aAlienPet : TAlienPet);
+    function GetCopy(const aIndex : integer): TAlienPet;
+    function GetCopyById (const aId : integer) : TAlienPet;
+    procedure Delete (const aId : integer);
+    function Count : integer;
+  end; 
+```
+
+Ora riapri `modulealienpets` perchè è il momento di creare una nuova route per recuperare gli animaletti disponibili.
+
+Aggiungi sotto a *implementation* la definizione di una nuova variabile globale di tipo `TAlienPetsArchive`:
+
+``` pascal
+var
+  pets : TAlienPetsArchive;   
+```
+
+Aggiungi una funzione di comodo per inserire alcuni valori di test:
+
+``` pascal
+procedure InitAlienPetsArchive;
+var
+  tmp : TAlienPet;
+begin
+  tmp := TAlienPet.Create;
+  tmp.Id:= 1;
+  tmp.Name:= 'Prootelon';
+  tmp.Species:= 'Zog';
+  pets.Add(tmp);
+
+  tmp := TAlienPet.Create;
+  tmp.Id:= 2;
+  tmp.Name:= 'Badelon';
+  tmp.Species:= 'Bloop';
+  pets.Add(tmp);
+
+  tmp := TAlienPet.Create;
+  tmp.Id:= 3;
+  tmp.Name:= 'Evilon';
+  tmp.Species:= 'Gleep';
+  pets.Add(tmp);
+end; 
+```
+
+ed crea e distruggi il nostro archivio nelle sezioni *initialization* e *finalization* della unit:
+
+``` pascal
+initialization
+  pets := TAlienPetsArchive.Create;
+  InitAlienPetsArchive;
+
+finalization
+  pets.Free;  
+```
+
+Così avremo a disposizione un repository di animaletti alieni in memoria e qualche valore precaricato per iniziare subito a vedere qualcosa.
+
+Ora aggiungi una nuova route alla unit:
+
+``` pascal
+  TRoutePetAliens = class(TBrookURLRoute)
+  protected
+    procedure DoRequest(ASender: TObject; ARoute: TBrookURLRoute; ARequest: TBrookHTTPRequest; AResponse: TBrookHTTPResponse); override;
+  public
+    procedure AfterConstruction; override;
+  end; 
+```
+
+Questa route risponderà al percorso `/alienpets` restituendo l'elenco degli animaletti presenti in quel momento nel repository:
+
+``` pascal
+procedure TRoutePetAliens.DoRequest(ASender: TObject; ARoute: TBrookURLRoute; ARequest: TBrookHTTPRequest; AResponse: TBrookHTTPResponse);
+begin
+  if HandleOptions(ARoute, ARequest, AResponse) then
+    exit;
+  AddStandardHeaders(AResponse);
+  AResponse.Send('{"pets":' + pets.ToJson + '}', 'application/json', 200);
+end;
+
+procedure TRoutePetAliens.AfterConstruction;
+begin
+  Methods:= [rmGET, rmOPTIONS];
+  Pattern:= '/alienpets';
+end; 
+```
+
+Siamo pronti per imbastire la pagina della nostra agenzia di adozione!
+
+Crea un file `index.html` fatto così:
+
+``` html
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Alien Pet Adoption Agency</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f8ff;
+            margin: 0;
+            padding: 20px;
+        }
+
+        h1 {
+            color: #4b0082;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        th,
+        td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #4b0082;
+            color: white;
+        }
+
+        button {
+            margin-top: 10px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>Alien Pet Adoption Agency</h1>
+
+    <h2>Available Alien Pets</h2>
+    <table id="petList">
+        <thead>
+            <tr>
+                <th>Id</th>                
+                <th>Name</th>
+                <th>Species</th>                
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- Pet items will be dynamically added here -->
+        </tbody>
+    </table>
+
+    <script>
+        const apiUrl = "https://localhost";
+                
+        
+        function displayPets(petsList) {
+            const petList = document.getElementById('petList').getElementsByTagName('tbody')[0];
+            petList.innerHTML = ''; // Clear existing pets
+            petsList.pets.forEach((pet, index) => {
+                const row = petList.insertRow();
+                row.insertCell(0).innerText = pet.id;
+                row.insertCell(1).innerText = pet.name;
+                row.insertCell(2).innerText = pet.species;                
+                row.insertCell(3).innerText = "todo";
+            });
+        }
 
 
+        async function fetchPets() {
+            try {
+                const response = await fetch(apiUrl + "/alienpets", { mode: 'cors' });
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                const pets = await response.json();                
+                displayPets(pets);
+            } catch (error) {
+                console.error('Error fetching species:', error);
+            }
+        }
+        
+        fetchPets();
+    </script>
+</body>
+</html>
+```
 
+Attiva il server e carica il file nel browser, questo è quello che apparirà:
+
+![basic alien list](printscreens/tu2_basic_list.png)
 
 
 
