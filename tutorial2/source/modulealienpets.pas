@@ -44,7 +44,7 @@ type
 
 implementation
 uses
-  fpjson, SysUtils,
+  fpjson, jsonparser, SysUtils,
   standardheaders, standardresponses, alienpets;
 
 var
@@ -62,13 +62,13 @@ begin
 
   tmp := TAlienPet.Create;
   tmp.Id:= 2;
-  tmp.Name:= 'Badelon';
+  tmp.Name:= 'Bidibop';
   tmp.Species:= 'Bloop';
   pets.Add(tmp);
 
   tmp := TAlienPet.Create;
   tmp.Id:= 3;
-  tmp.Name:= 'Evilon';
+  tmp.Name:= 'Sguish';
   tmp.Species:= 'Gleep';
   pets.Add(tmp);
 end;
@@ -90,6 +90,22 @@ begin
   Pattern:= '/species';
 end;
 
+procedure ReadAlienFromJson(const aData : TJSONData; alien : TAlienPet);
+var
+  tmp : TJSONData;
+begin
+  alien.Clear;
+  tmp := aData.FindPath('id');
+  if Assigned(tmp) then
+    alien.Id := tmp.Value;
+  tmp := aData.FindPath('name');
+  if Assigned(tmp) then
+    alien.Name := tmp.Value;
+  tmp := aData.FindPath('species');
+  if Assigned(tmp) then
+    alien.Species := tmp.Value;
+end;
+
 { TRoutePetAliens }
 
 procedure TRoutePetAliens.DoRequest(ASender: TObject; ARoute: TBrookURLRoute; ARequest: TBrookHTTPRequest; AResponse: TBrookHTTPResponse);
@@ -108,22 +124,43 @@ end;
 
 procedure TRoutePetAlien.Post(ARoute: TBrookURLRoute; ARequest: TBrookHTTPRequest; AResponse: TBrookHTTPResponse);
 var
-  str : String;
-  jData, subData : TJSONData;
+  jData : TJSONData;
+  newAlien : TAlienPet;
 begin
   if ARequest.Payload.Text <> '' then
   begin
-    str := ARequest.Payload.Text;
-    jData := GetJSON(str);
+    jData := GetJSON(ARequest.Payload.Text);
     try
-      //subData := jData.FindPath('referent');
-      //if Assigned(subData) then
-      //begin
-      //  if not LeggiReferenteDaJson(referente, subData) then
-      //    malformed := true;
-      //end
-      //else
-      //  malformed := true;
+      newAlien := TAlienPet.Create;
+      ReadAlienFromJson(jData, newAlien);
+      newAlien.Id:= pets.GetNewId;
+      pets.Add(newAlien);
+    finally
+      jData.Free;
+    end;
+    AResponse.Send(newAlien.ToJson, 'application/json', 200);
+  end
+  else
+    AResponse.Send('Invalid request', 'text/plain', 400);
+end;
+
+procedure TRoutePetAlien.Put(ARoute: TBrookURLRoute; ARequest: TBrookHTTPRequest; AResponse: TBrookHTTPResponse);
+var
+  jData : TJSONData;
+  editAlien : TAlienPet;
+begin
+  if ARequest.Payload.Text <> '' then
+  begin
+    jData := GetJSON(ARequest.Payload.Text);
+    try
+      editAlien := TAlienPet.Create;
+      try
+        ReadAlienFromJson(jData, editAlien);
+        pets.Update(editAlien);
+        AResponse.Send(editAlien.ToJson, 'application/json', 200);
+      finally
+        editAlien.Free;
+      end;
     finally
       jData.Free;
     end;
@@ -132,14 +169,10 @@ begin
     AResponse.Send('Invalid request', 'text/plain', 400);
 end;
 
-procedure TRoutePetAlien.Put(ARoute: TBrookURLRoute; ARequest: TBrookHTTPRequest; AResponse: TBrookHTTPResponse);
-begin
-
-end;
-
 procedure TRoutePetAlien.Delete(const aPetId: integer; ARoute: TBrookURLRoute; ARequest: TBrookHTTPRequest; AResponse: TBrookHTTPResponse);
 begin
-
+  pets.Delete(aPetId);
+  AResponse.Send('deleted ' + IntToStr(aPetId), 'text/plain', 200);
 end;
 
 procedure TRoutePetAlien.DoRequest(ASender: TObject; ARoute: TBrookURLRoute; ARequest: TBrookHTTPRequest; AResponse: TBrookHTTPResponse);
@@ -152,7 +185,7 @@ begin
 
   tmpId := 0;
   if (Length(ARoute.Segments) >= 1) then
-    tmpId := StrToInt(ARoute.Segments[Length(ARoute.Segments)-1]);
+    tmpId := StrToInt(RightStr(ARoute.Segments[Length(ARoute.Segments)-1], Length(ARoute.Segments[Length(ARoute.Segments)-1]) - 1 ));
 
   if ARequest.Method = 'POST' then
     Post(ARoute, ARequest, AResponse)
@@ -165,7 +198,7 @@ end;
 procedure TRoutePetAlien.AfterConstruction;
 begin
   Methods:= [rmGET, rmPOST, rmPUT, rmDELETE, rmOPTIONS];
-  Pattern := '/alienpet/([[0-9]*)';
+  Pattern := 'alienpet(([/])|(/[0-9]+))?';
 end;
 
 

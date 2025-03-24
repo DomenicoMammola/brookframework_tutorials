@@ -34,24 +34,24 @@ type
   strict private
     FList : TObjectList;
     FCriticalSection : TCriticalSection;
+    FLastId : integer;
     function Get(const aIndex : integer): TAlienPet;
   public
     constructor Create;
     destructor Destroy; override;
-    function ToJson: String;
+    function ToJson: String; // convert the archive to a json string
 
-    procedure Add(const aAlienPet : TAlienPet);
-    function GetCopy(const aIndex : integer): TAlienPet;
-    function GetCopyById (const aId : integer) : TAlienPet;
-    procedure Delete (const aId : integer);
-    function Count : integer;
+    procedure Add(const aAlienPet : TAlienPet); // add a pet to the archive
+    procedure Delete (const aId : integer); // delete a pet from the archive by its own id
+    procedure Update(const aSourceAlienPet : TAlienPet); // update a pet in the archive
+    function GetNewId : integer; // generate a new unique id (for a newly created pet)
   end;
 
 
 implementation
 
 uses
-  SysUtils;
+  SysUtils, Math;
 
 { TAlienPet }
 
@@ -117,6 +117,7 @@ constructor TAlienPetsArchive.Create;
 begin
   FList := TObjectList.Create(true);
   FCriticalSection := TCriticalSection.Create;
+  FLastId := 0;
 end;
 
 destructor TAlienPetsArchive.Destroy;
@@ -151,41 +152,15 @@ begin
   FCriticalSection.Acquire;
   try
     FList.Add(aAlienPet);
+    FLastId:= Max(aAlienPet.Id, FLastId);
   finally
     FCriticalSection.Leave;
   end;
-end;
-
-function TAlienPetsArchive.GetCopy(const aIndex: integer): TAlienPet;
-begin
-  Result := TAlienPet.Create;
-  Result.Assign(Get(aIndex));
 end;
 
 function TAlienPetsArchive.Get(const aIndex: integer): TAlienPet;
 begin
   Result := FList.Items[aIndex] as TAlienPet;
-end;
-
-function TAlienPetsArchive.GetCopyById(const aId: integer): TAlienPet;
-var
-  i : integer;
-begin
-  Result := nil;
-  FCriticalSection.Acquire;
-  try
-    for i := 0 to FList.Count - 1 do
-    begin
-      if Get(i).Id = aId then
-      begin
-        Result := TAlienPet.Create;
-        Result.Assign(Get(i));
-        exit;
-      end;
-    end;
-  finally
-    FCriticalSection.Leave;
-  end;
 end;
 
 procedure TAlienPetsArchive.Delete(const aId: integer);
@@ -207,11 +182,31 @@ begin
   end;
 end;
 
-function TAlienPetsArchive.Count: integer;
+procedure TAlienPetsArchive.Update(const aSourceAlienPet: TAlienPet);
+var
+  i : integer;
 begin
   FCriticalSection.Acquire;
   try
-    Result := FList.Count;
+    for i := 0 to FList.Count - 1 do
+    begin
+      if Get(i).Id = aSourceAlienPet.Id then
+      begin
+        Get(i).Assign(aSourceAlienPet);
+        exit;
+      end;
+    end;
+  finally
+    FCriticalSection.Leave;
+  end;
+end;
+
+function TAlienPetsArchive.GetNewId: integer;
+begin
+  FCriticalSection.Acquire;
+  try
+    inc(FLastId);
+    Result := FLastId;
   finally
     FCriticalSection.Leave;
   end;

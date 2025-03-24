@@ -265,22 +265,25 @@ Devi anche creare una classe per memorizzare un elenco di animaletti che utilizz
   strict private
     FList : TObjectList;
     FCriticalSection : TCriticalSection;
+    FLastId : integer;
     function Get(const aIndex : integer): TAlienPet;
   public
     constructor Create;
     destructor Destroy; override;
+    function ToJson: String; // convert the archive to a json string
 
-    procedure Add(const aAlienPet : TAlienPet);
-    function GetCopy(const aIndex : integer): TAlienPet;
-    function GetCopyById (const aId : integer) : TAlienPet;
-    procedure Delete (const aId : integer);
-    function Count : integer;
-  end; 
+    procedure Add(const aAlienPet : TAlienPet); // add a pet to the archive
+    procedure Delete (const aId : integer); // delete a pet from the archive by its own id
+    procedure Update(const aSourceAlienPet : TAlienPet); // update a pet in the archive
+    function GetNewId : integer; // generate a new unique id (for a newly created pet)
+  end;
+
+
 ```
 
 Ora riapri `modulealienpets` perchè è il momento di creare una nuova route per recuperare gli animaletti disponibili.
 
-Aggiungi sotto a *implementation* la definizione di una nuova variabile globale di tipo `TAlienPetsArchive`:
+Aggiungi sotto ad *implementation* la definizione di una nuova variabile globale di tipo `TAlienPetsArchive`:
 
 ``` pascal
 var
@@ -302,13 +305,13 @@ begin
 
   tmp := TAlienPet.Create;
   tmp.Id:= 2;
-  tmp.Name:= 'Badelon';
+  tmp.Name:= 'Bidibop';
   tmp.Species:= 'Bloop';
   pets.Add(tmp);
 
   tmp := TAlienPet.Create;
   tmp.Id:= 3;
-  tmp.Name:= 'Evilon';
+  tmp.Name:= 'Sguish';
   tmp.Species:= 'Gleep';
   pets.Add(tmp);
 end; 
@@ -405,7 +408,6 @@ Crea un file `index.html` fatto così:
 </head>
 
 <body>
-
     <h1>Alien Pet Adoption Agency</h1>
 
     <h2>Available Alien Pets</h2>
@@ -424,8 +426,7 @@ Crea un file `index.html` fatto così:
     </table>
 
     <script>
-        const apiUrl = "https://localhost";
-                
+        const apiUrl = "https://localhost";               
         
         function displayPets(petsList) {
             const petList = document.getElementById('petList').getElementsByTagName('tbody')[0];
@@ -438,7 +439,6 @@ Crea un file `index.html` fatto così:
                 row.insertCell(3).innerText = "todo";
             });
         }
-
 
         async function fetchPets() {
             try {

@@ -42,7 +42,6 @@
 </head>
 
 <body>
-
     <h1>Alien Pet Adoption Agency</h1>
 
     <h2>Add a New Alien Pet</h2>
@@ -52,8 +51,18 @@
             <option value="">Select Species</option>
             <!-- Species options will be dynamically added here -->
         </select>
-        <textarea id="petDescription" placeholder="Description" required></textarea>
         <button type="submit">Add Pet</button>
+    </form>
+
+    <h2>Edit an Existing Alien Pet</h2>
+    <form id="updatePetForm">
+        <input type="text" id="petIdForUpdate" readonly="true">
+        <input type="text" id="petNameForUpdate" placeholder="Pet Name" required>
+        <select id="petSpeciesForUpdate" required>
+            <option value="">Select Species</option>
+            <!-- Species options will be dynamically added here -->
+        </select>
+        <button type="submit">Update Pet</button>
     </form>
 
     <h2>Available Alien Pets</h2>
@@ -74,7 +83,6 @@
     <script>
         const apiUrl = "https://localhost";
 
-
         function displayPets(petsList) {
             const petList = document.getElementById('petList').getElementsByTagName('tbody')[0];
             petList.innerHTML = ''; // Clear existing pets
@@ -84,37 +92,51 @@
                 row.insertCell(1).innerText = pet.name;
                 row.insertCell(2).innerText = pet.species;
                 const actionsCell = row.insertCell(3);
-                actionsCell.innerHTML = `<button onclick="editPet(${pet.id})">Edit</button>
+                actionsCell.innerHTML = `<button onclick="editPet(${pet.id}, '${pet.name}', '${pet.species}')">Edit</button>
                                          <button onclick="deletePet(${pet.id})">Delete</button>`;
             });
         }
 
-        // Function to add a new pet
-        document.getElementById('addPetForm').addEventListener('submit', function (event) {
-            event.preventDefault();
-            const newPet = {
-                name: document.getElementById('petName').value,
-                species: document.getElementById('petSpecies').value,
-                description: document.getElementById('petDescription').value
-            };
-            pets.push(newPet);
-            displayPets();
-            this.reset(); // Clear the form
-        });
 
-        // Function to delete a pet
-        function deletePet(index) {
-            pets.splice(index, 1);
-            displayPets();
+
+        async function deletePet(id) {
+            try {
+                const response = await fetch(apiUrl + "/alienpet/" + id, { method: 'DELETE'});
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                console.log('Pet deleted:', id);
+                fetchPets(); // Refresh the pet list after adding
+            } catch (error) {
+                console.error('Error deleting pet:', error);
+            }
         }
 
-        // Function to edit a pet
-        function editPet(index) {
-            const pet = pets[index];
-            document.getElementById('petName').value = pet.name;
-            document.getElementById('petSpecies').value = pet.species;
-            document.getElementById('petDescription').value = pet.description;
-            deletePet(index); // Remove the pet from the list for editing
+        async function putUpdatedPet(updatedPet) {
+            try {
+                const response = await fetch(apiUrl + "/alienpet", {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(updatedPet)
+                });
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                const result = await response.json();
+                console.log('Pet updated:', result);
+                fetchPets(); // Refresh the pet list after adding
+            } catch (error) {
+                console.error('Error updating pet:', error);
+            }
+        }
+
+
+        function editPet(id, name, species) {
+            document.getElementById('petIdForUpdate').value = id;
+            document.getElementById('petNameForUpdate').value = name;
+            document.getElementById('petSpeciesForUpdate').value = species;
         }
 
         async function fetchSpecies() {
@@ -130,15 +152,21 @@
             }
         }
 
-        // Function to populate the species dropdown
         function populateSpeciesDropdown(species) {
             const speciesDropdown = document.getElementById('petSpecies');
+            const speciesDropdownForUpdate = document.getElementById('petSpeciesForUpdate');
             species.forEach(speciesItem => {
                 const option = document.createElement('option');
                 option.value = speciesItem;
                 option.textContent = speciesItem;
                 speciesDropdown.appendChild(option);
+
+                const optionForUpdate = document.createElement('option');
+                optionForUpdate.value = speciesItem;
+                optionForUpdate.textContent = speciesItem;
+                speciesDropdownForUpdate.appendChild(optionForUpdate);
             });
+
         }
 
         async function fetchPets() {
@@ -154,7 +182,6 @@
             }
         }
 
-        // Function to post a new pet
         async function postNewPet(newPet) {
             try {
                 const response = await fetch(apiUrl + "/alienpet", {
@@ -175,15 +202,25 @@
             }
         }
 
-        // Function to add a new pet
         document.getElementById('addPetForm').addEventListener('submit', function (event) {
             event.preventDefault();
             const newPet = {
+                id: 0,
                 name: document.getElementById('petName').value,
-                species: document.getElementById('petSpecies').value,
-                description: document.getElementById('petDescription').value
+                species: document.getElementById('petSpecies').value
             };
-            postNewPet(newPet); // Call the new function to post the pet
+            postNewPet(newPet);
+            this.reset(); // Clear the form
+        });
+
+        document.getElementById('updatePetForm').addEventListener('submit', function (event) {
+            event.preventDefault();
+            const updatedPet = {
+                id: document.getElementById('petIdForUpdate').value,
+                name: document.getElementById('petNameForUpdate').value,
+                species: document.getElementById('petSpeciesForUpdate').value
+            };
+            putUpdatedPet(updatedPet);
             this.reset(); // Clear the form
         });
 
