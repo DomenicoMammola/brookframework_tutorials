@@ -197,7 +197,7 @@ end;
 
 procedure TRoutePetAlien.AfterConstruction;
 begin
-  Methods:= [rmGET, rmPOST, rmPUT, rmDELETE, rmOPTIONS];
+  Methods:= [rmPOST, rmPUT, rmDELETE, rmOPTIONS];
   Pattern := 'alienpet(([/])|(/[0-9]+))?';
 end;
 

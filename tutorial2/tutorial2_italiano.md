@@ -258,7 +258,7 @@ Nella unit definisci un nuovo tipo che ci servirà per rappresentare il singolo 
   end; 
   ```
 
-Devi anche creare una classe per memorizzare un elenco di animaletti che utilizzeremo nel server come repository in memoria degli animaletti. Proprio per questo dovrai proteggere le operazioni di lettura/scrittura con una critical section e i metodi Get* devono restituire una copia dell'istanza originale:
+Devi anche creare una classe per memorizzare un elenco di animaletti che utilizzeremo nel server come repository in memoria dell'agenzia di adozione. L'accesso potrebbe essere concorrente quindi dovrai proteggere le operazioni di lettura/scrittura con una critical section:
 
 ``` pascal
   TAlienPetsArchive = class
@@ -280,6 +280,8 @@ Devi anche creare una classe per memorizzare un elenco di animaletti che utilizz
 
 
 ```
+
+`GetNewId` è il metodo che dovrà fornire un id valido per i nuovi animaletti da memorizzare. Non abbiamo un database sotto il sedere e quindi dobbiamo arrangiarci... basterà un contatore globale che venga avanzato ad ogni inserimento.
 
 Ora riapri `modulealienpets` perchè è il momento di creare una nuova route per recuperare gli animaletti disponibili.
 
@@ -317,7 +319,7 @@ begin
 end; 
 ```
 
-ed crea e distruggi il nostro archivio nelle sezioni *initialization* e *finalization* della unit:
+e crea e distruggi il nostro archivio nelle sezioni *initialization* e *finalization* della unit:
 
 ``` pascal
 initialization
@@ -328,7 +330,7 @@ finalization
   pets.Free;  
 ```
 
-Così avremo a disposizione un repository di animaletti alieni in memoria e qualche valore precaricato per iniziare subito a vedere qualcosa.
+In questo modo avremo a disposizione un repository in memoria di animaletti alieni completo di qualche valore precaricato per iniziare subito a vedere qualcosa.
 
 Ora aggiungi una nuova route alla unit:
 
@@ -358,6 +360,8 @@ begin
   Pattern:= '/alienpets';
 end; 
 ```
+
+Aggiungi la route all'istanza di `THTTPServer` come visto nel tutorial 1.
 
 Siamo pronti per imbastire la pagina della nostra agenzia di adozione!
 
@@ -459,9 +463,292 @@ Crea un file `index.html` fatto così:
 </html>
 ```
 
-Attiva il server e carica il file nel browser, questo è quello che apparirà:
+Attiva il server, carica il file nel browser e questo è quello che apparirà:
 
 ![basic alien list](printscreens/tu2_basic_list.png)
 
+Ora possiamo creare una nuova route per gestire le operazioni di inserimento, modifica e cancellazione.
+
+Nella unit `modulealienpets` aggiungi la route:
+
+``` pascal
+  TRoutePetAlien = class(TBrookURLRoute)
+  strict private
+    procedure Post(ARoute: TBrookURLRoute; ARequest: TBrookHTTPRequest; AResponse: TBrookHTTPResponse);
+    procedure Put(ARoute: TBrookURLRoute; ARequest: TBrookHTTPRequest; AResponse: TBrookHTTPResponse);
+    procedure Delete(const aPetId: integer; ARoute: TBrookURLRoute; ARequest: TBrookHTTPRequest; AResponse: TBrookHTTPResponse);
+  protected
+    procedure DoRequest(ASender: TObject; ARoute: TBrookURLRoute; ARequest: TBrookHTTPRequest; AResponse: TBrookHTTPResponse); override;
+  public
+    procedure AfterConstruction; override;
+  end;
+```
+
+E' già evidente che sfrutteremo i metodi http per recepire le diverse operazioni da compiere. Compila il metodo `AfterConstruction` in questo modo:
+
+``` pascal
+procedure TRoutePetAlien.AfterConstruction;
+begin
+  Methods:= [rmPOST, rmPUT, rmDELETE, rmOPTIONS];
+  Pattern := 'alienpet(([/])|(/[0-9]+))?';
+end;
+```
+
+Il metodo POST servirà per l'inserimento, il metodo PUT per l'aggiormento, il metodo DELETE per la cancellazione e il già conosciuto OPTIONS per gestire le chiamate cors.
+
+Come vedi la proprietà pattern si è fatta più complicata rispetto alla precedente route. Il framework Brooks implementa il match del routing appoggiandosi alle espressioni regolari *PCRE2* e qui abbiamo bisogno di una espressione regolare per fare in modo che la route risponda quando invocata come:
+  * /alienpet o /alienpet/ per le chiamate POST, PUT, OPTIONS
+  * /alienpet/123 per le chiamate DELETE dove 123 è l'id dell'animaletto alieno da eliminare
+
+Un buon sito per fare il test delle regex è questo: https://www.debuggex.com/?flavor=pcre mentre la documentazione di PCRE è facilmente recuperabile in rete.
+
+Se questo non fosse un sito semplificato, molto probabilmente avresti bisogno di implementare anche il metodo GET che qui invece è omesso.
+
+Devi ora compilare la `DoRequest` in questo modo:
+
+``` pascal
+procedure TRoutePetAlien.DoRequest(ASender: TObject; ARoute: TBrookURLRoute; ARequest: TBrookHTTPRequest; AResponse: TBrookHTTPResponse);
+var
+  tmpId : integer;
+begin
+  if HandleOptions(ARoute, ARequest, AResponse) then
+    exit;
+  AddStandardHeaders(AResponse);
+
+  tmpId := 0;
+  if (Length(ARoute.Segments) >= 1) then
+    tmpId := StrToInt(RightStr(ARoute.Segments[Length(ARoute.Segments)-1], Length(ARoute.Segments[Length(ARoute.Segments)-1]) - 1 ));
+
+  if ARequest.Method = 'POST' then
+    Post(ARoute, ARequest, AResponse)
+  else if ARequest.Method = 'PUT' then
+    Put(ARoute, ARequest, AResponse)
+  else if ARequest.Method = 'DELETE' then
+    Delete(tmpId, ARoute, ARequest, AResponse);
+end;
+```
+
+`tmpId`contiene l'eventuale id passato nella url della chiamata. I segmenti della URL possono essere estratti dalla proprietà `Segments` dell'istanza corrente della `TBrookURLRoute`.
+
+Ora compila la procedura di gestione del POST:
+
+``` pascal
+procedure TRoutePetAlien.Post(ARoute: TBrookURLRoute; ARequest: TBrookHTTPRequest; AResponse: TBrookHTTPResponse);
+var
+  jData : TJSONData;
+  newAlien : TAlienPet;
+begin
+  if ARequest.Payload.Text <> '' then
+  begin
+    jData := GetJSON(ARequest.Payload.Text);
+    try
+      newAlien := TAlienPet.Create;
+      ReadAlienFromJson(jData, newAlien);
+      newAlien.Id:= pets.GetNewId;
+      pets.Add(newAlien);
+    finally
+      jData.Free;
+    end;
+    AResponse.Send(newAlien.ToJson, 'application/json', 200);
+  end
+  else
+    AResponse.Send('Invalid request', 'text/plain', 400);
+end;
+```
+
+I dati del nuovo animaletto verranno passati nel payload della chiamata. E' importante notare come il browser chiamante si aspetti di ricevere un codice 200 se tutto è filato liscio e la consuetudine dice anche di restituire un codice 400 se qualcosa invece non fosse andato bene.
+
+La procedura di gestione della DELETE risulta molto più semplice:
+
+``` pascal
+procedure TRoutePetAlien.Delete(const aPetId: integer; ARoute: TBrookURLRoute; ARequest: TBrookHTTPRequest; AResponse: TBrookHTTPResponse);
+begin
+  pets.Delete(aPetId);
+  AResponse.Send('deleted ' + IntToStr(aPetId), 'text/plain', 200);
+end;
+```
+
+Anche lei dovrà ritornare un codice 200 al chiamante.
+
+La procedura di gestione del PUT è molto simile a quella del POST per cui non verrà riportata qui.
+
+La nuova route andrà aggiunta alla classe `THTTPServer` come fatto in precedenza per la route `/alienpets`.
+
+Il server è così pronto!
+
+Modifica il file `index.html` aggiungendo nel `body` sopra la `table` queste due `form`, una per l'inserimento e una per la modifica (ne utilizziamo due diverse per semplicità):
+
+``` html
+    <h2>Add a New Alien Pet</h2>
+    <form id="addPetForm">
+        <input type="text" id="petName" placeholder="Pet Name" required>
+        <select id="petSpecies" required>
+            <option value="">Select Species</option>
+            <!-- Species options will be dynamically added here -->
+        </select>
+        <button type="submit">Add Pet</button>
+    </form>
+
+    <h2>Edit an Existing Alien Pet</h2>
+    <form id="updatePetForm">
+        <input type="text" id="petIdForUpdate" readonly="true">
+        <input type="text" id="petNameForUpdate" placeholder="Pet Name" required>
+        <select id="petSpeciesForUpdate" required>
+            <option value="">Select Species</option>
+            <!-- Species options will be dynamically added here -->
+        </select>
+        <button type="submit">Update Pet</button>
+    </form>
+```
+
+Al fondo della pagina aggiungi queste funzioni javascript:
+
+``` javascript
+async function fetchSpecies() {
+    try {
+        const response = await fetch(apiUrl + "/species", { mode: 'cors' });
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+        const species = await response.json();
+        populateSpeciesDropdown(species);
+    } catch (error) {
+        console.error('Error fetching species:', error);
+    }
+}
+
+function populateSpeciesDropdown(species) {
+    const speciesDropdown = document.getElementById('petSpecies');
+    const speciesDropdownForUpdate = document.getElementById('petSpeciesForUpdate');
+    species.forEach(speciesItem => {
+        const option = document.createElement('option');
+        option.value = speciesItem;
+        option.textContent = speciesItem;
+        speciesDropdown.appendChild(option);
+
+        const optionForUpdate = document.createElement('option');
+        optionForUpdate.value = speciesItem;
+        optionForUpdate.textContent = speciesItem;
+        speciesDropdownForUpdate.appendChild(optionForUpdate);
+    });
+}
+```
+
+Ci serviranno per popolare le combobox con le specie disponibili per i nostri animaletti. Il codice è molto molto simile a quello già visto nel tutorial 1.
+
+Nella definizione della tabella sostituisci a questa riga
+```
+row.insertCell(3).innerText = "todo";
+```
+quest'altra:
+``` javascript
+const actionsCell = row.insertCell(3);
+actionsCell.innerHTML = `<button onclick="editPet(${pet.id}, '${pet.name}', '${pet.species}')">Edit</button>
+<button onclick="deletePet(${pet.id})">Delete</button>`;
+```
+
+Così facendo aggiungiamo due pulsanti su ogni riga della tabella degli animaletti: uno per la modifica e uno per la cancellazione.
 
 
+Ora una bella iniezione di funzioni javascript per invocare i metodi del server CRUD:
+
+``` javascript
+async function deletePet(id) {
+    try {
+        const response = await fetch(apiUrl + "/alienpet/" + id, { method: 'DELETE'});
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+        console.log('Pet deleted:', id);
+        fetchPets(); // Refresh the pet list after adding
+    } catch (error) {
+        console.error('Error deleting pet:', error);
+    }
+}
+
+async function putUpdatedPet(updatedPet) {
+    try {
+        const response = await fetch(apiUrl + "/alienpet", {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(updatedPet)
+        });
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+        const result = await response.json();
+        console.log('Pet updated:', result);
+        fetchPets(); // Refresh the pet list after adding
+    } catch (error) {
+        console.error('Error updating pet:', error);
+    }
+}
+
+function editPet(id, name, species) {
+    document.getElementById('petIdForUpdate').value = id;
+    document.getElementById('petNameForUpdate').value = name;
+    document.getElementById('petSpeciesForUpdate').value = species;
+}
+
+async function postNewPet(newPet) {
+    try {
+        const response = await fetch(apiUrl + "/alienpet", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(newPet)
+        });
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+        const result = await response.json();
+        console.log('Pet added:', result);
+        fetchPets(); // Refresh the pet list after adding
+    } catch (error) {
+        console.error('Error adding pet:', error);
+    }
+}
+```
+
+e in coda alla sezione `<script>`:
+
+``` javascript
+document.getElementById('addPetForm').addEventListener('submit', function (event) {
+    event.preventDefault();
+    const newPet = {
+        id: 0,
+        name: document.getElementById('petName').value,
+        species: document.getElementById('petSpecies').value
+    };
+    postNewPet(newPet);
+    this.reset(); // Clear the form
+});
+
+document.getElementById('updatePetForm').addEventListener('submit', function (event) {
+    event.preventDefault();
+    const updatedPet = {
+        id: document.getElementById('petIdForUpdate').value,
+        name: document.getElementById('petNameForUpdate').value,
+        species: document.getElementById('petSpeciesForUpdate').value
+    };
+    putUpdatedPet(updatedPet);
+    this.reset(); // Clear the form
+});
+
+fetchSpecies();
+fetchPets();
+```
+La nostra pagina html è pronta per interagire col server quindi esegui il server e carica la pagina nel browser!
+
+Eccola in azione:
+
+![fully working](printscreens/tu2_fully_working.png)
+
+## Cosa abbiamo visto
+  * come utilizzare il framework Brook per creare un server crud:
+    * come supportare la modalità cors in fase di sviluppo
+    * come implementare una route per operazioni CRUD con metodi multipli e parametri nel path
+  
