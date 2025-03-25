@@ -2,7 +2,7 @@
 
 The [Brook framework](https://github.com/risoflora/brookframework) is a cross-platform framework for Lazarus, Free pascal compiler and Delphi to build web server applications and microservices.
 
-With the Brook framework you can develop a server with a very small memory footprint and low cpu usage. Internally it uses the Sagui library that is build on the [GNU libmicrohttpd](https://www.gnu.org/software/libmicrohttpd/). 
+With the Brook framework you can develop a server with a very small memory footprint and low cpu usage. Internally it uses the Sagui library that is built on the [GNU libmicrohttpd](https://www.gnu.org/software/libmicrohttpd/). 
 
 ## Tutorial 1
 It shows:
