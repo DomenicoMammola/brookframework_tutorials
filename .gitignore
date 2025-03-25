@@ -67,7 +67,7 @@ __recovery/
 
 # Lazarus compiler-generated binaries (safe to delete)
 *.exe
-#*.dll
+*.dll
 *.so
 *.dylib
 *.lrs
@@ -97,6 +97,11 @@ backup/
 *.app/
 
 /lib
+
+*.pem
+
+TestProject
+
 
 
 
