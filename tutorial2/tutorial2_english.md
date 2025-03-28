@@ -1,6 +1,6 @@
 # Tutorial 2 - A CRUD server with the Brook framework
 
-Let's develop a CRUD server together using the Brook library.
+Let's develop a CRUD server together using the [Brook](https://github.com/risoflora/brookframework) library.
 
 The development environment setup has already been described in Tutorial 1.
 
@@ -753,4 +753,6 @@ Here it is in action:
   * how to use the Brook framework to create a CRUD server:
     * how to support CORS mode during development
     * how to implement a route for CRUD operations with multiple methods and parameters in the path
-  
+
+## Where to find the source code
+Full source code of this tutorial is available at: [https://github.com/DomenicoMammola/brookframework_tutorials](https://github.com/DomenicoMammola/brookframework_tutorials)

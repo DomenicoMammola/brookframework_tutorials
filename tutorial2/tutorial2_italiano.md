@@ -1,6 +1,6 @@
 # Tutorial 2 - Un server CRUD con il framework Brook
 
-Sviluppiamo insieme un server CRUD utilizzando la libreria Brook.
+Sviluppiamo insieme un server CRUD utilizzando la libreria [Brook](https://github.com/risoflora/brookframework).
 
 La configurazione dell'ambiente di sviluppo è già stata descritta nel Tutorial 1.
 
@@ -232,7 +232,7 @@ end;
 
 Finito! Lancia il server e ricarica `test.html`: la pagina è tornata a funzionare anche con il servizio spostato sulla porta 5443.
 
-## Finalmente crud
+## Finalmente CRUD
 
 Aggiungi una nuova unit `alienpets` al progetto.
 
@@ -751,4 +751,7 @@ Eccola in azione:
   * come utilizzare il framework Brook per creare un server crud:
     * come supportare la modalità cors in fase di sviluppo
     * come implementare una route per operazioni CRUD con metodi multipli e parametri nel path
+
+## Dove trovare il codice sorgente
+Il codice sorgente di questo tutorial è disponibile a questo indirizzo: [https://github.com/DomenicoMammola/brookframework_tutorials](https://github.com/DomenicoMammola/brookframework_tutorials)
   
