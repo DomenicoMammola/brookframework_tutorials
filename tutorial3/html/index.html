@@ -1,0 +1,13 @@
+<html>
+<body>
+
+<script>
+function showVideo() {
+  var r = 'https://localhost:6443/video';
+  var newWindow = window.open('', '_blank');
+  newWindow.document.write('<html><body><video width="50%" controls autoplay muted><source src="' + r + '"type="video/mp4"></source></video></body></html>')
+}
+</script>
+ <button type="button" onclick="showVideo()">Show me the video</button> 
+</body>
+</html>
