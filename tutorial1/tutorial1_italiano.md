@@ -214,7 +214,7 @@ Sarà necessario aggiungere un'eccezione di sicurezza nel browser, il certificat
 Nel wiki della libreria Brook è descritto come utilizzare un certificato vero su un server Windows connesso ad internet: https://github.com/risoflora/brookframework/wiki/How-to-configure-TLS-in-Brook-5-Framework-on-a-Microsoft-Windows-Server
 
 ## Cosa abbiamo visto
-  * come fare il setup di un progetto che utilizzare il framework Brook
+  * come fare il setup di un progetto che utilizza il framework Brook
   * come creare un semplice servizio che risponda ad una chiamata http
   * come implementare lo stesso servizio utilizzando https
 
