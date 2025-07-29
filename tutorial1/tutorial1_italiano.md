@@ -44,9 +44,6 @@ cd /usr/lib
 sudo ln -s libsagui.so.3.5.2 libsagui.so.3
 ```
 
-Se usi windows sarà necessario installare anche le dll della libreria `gnutls`. Mentre scrivo l'ultima disponibile per windows a 64bit si può scaricare da qui: [https://github.com/risoflora/libsagui/releases/download/v3.5.1/gnutls-3.8.6-mingw_amd64.zip](https://github.com/risoflora/libsagui/releases/download/v3.5.1/gnutls-3.8.6-mingw_amd64.zip). Nuovamente il contenuto dello zip andrà copiato nella cartella in cui è salvato il progetto.
-
-
 ### Passiamo finalmente al codice...
 
 I webservice costruiti tramite il framework Brook poggiano su 2 pilastri:
@@ -183,6 +180,8 @@ openssl req -x509 -nodes -days 1000 -newkey rsa:2048 -keyout self_signed_key.pem
 ```
 
 Sarà necessario anche procurarsi la versione della libreria Sagui col supporto tls. Il repository come abbiamo visto prima è [https://github.com/risoflora/libsagui/releases](https://github.com/risoflora/libsagui/releases), questa volta però andrà scaricato l'archivio `libsagui_tls-3.5.2-linux_amd64.tar.gz` per linux o `libsagui_tls-3.5.2-windows_amd64.zip` per windows. Andranno poi ripetute le operazioni di deploy precedentemente descritte.
+
+Se usi windows sarà necessario installare anche le dll della libreria `gnutls`. Mentre scrivo l'ultima disponibile per windows a 64bit si può scaricare da qui: [https://github.com/risoflora/libsagui/releases/download/v3.5.1/gnutls-3.8.6-mingw_amd64.zip](https://github.com/risoflora/libsagui/releases/download/v3.5.1/gnutls-3.8.6-mingw_amd64.zip). Nuovamente il contenuto dello zip andrà copiato nella cartella in cui è salvato il progetto.
 
 Una volta generato il certificato e messo a posto la libreria, possiamo dedicarci alle modifiche al codice.
 
