@@ -44,6 +44,9 @@ cd /usr/lib
 sudo ln -s libsagui.so.3.5.2 libsagui.so.3
 ```
 
+Se usi windows sarà necessario installare anche le dll della libreria `gnutls`. Mentre scrivo l'ultima disponibile per windows a 64bit si può scaricare da qui: [https://github.com/risoflora/libsagui/releases/download/v3.5.1/gnutls-3.8.6-mingw_amd64.zip](https://github.com/risoflora/libsagui/releases/download/v3.5.1/gnutls-3.8.6-mingw_amd64.zip). Nuovamente il contenuto dello zip andrà copiato nella cartella in cui è salvato il progetto.
+
+
 ### Passiamo finalmente al codice...
 
 I webservice costruiti tramite il framework Brook poggiano su 2 pilastri:
